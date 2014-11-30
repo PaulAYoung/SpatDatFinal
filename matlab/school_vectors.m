@@ -1,0 +1,63 @@
+% read data
+star_scores = readtable('./oak_star.csv', 'TreatAsEmpty', 'NULL', ...
+    'format', '%f%f%s%s%f%f%f%f%f%f%s%s%u%u', ...
+    'Delimiter', '\t' ...
+    );
+
+%%
+[oak, oak_data] = shaperead('oak_union.shp', 'UseGeoCoords', true);
+
+%%
+figure
+hold on
+axis xy
+
+plot(star_scores.Longitude, star_scores.Latitude, 'ro')
+
+for i=1:length(oak)
+    plot(oak(i).Lon, oak(i).Lat)
+end
+
+%% Create field
+
+data_filter = star_scores.year==2003 & ...
+                strcmp(star_scores.Charter, 'N') & ...
+                star_scores.testid==7 & ...
+                star_scores.grade==2 ...
+                ;
+
+range = [
+    -122.35, 37.65
+    -122.1, 37.9
+    ];
+grid_size=.0025;
+x = star_scores.Longitude(data_filter);
+y = star_scores.Latitude(data_filter);
+values = star_scores.meanscaledscore(data_filter);
+weights = star_scores.totaltestedatentitylevel(data_filter);
+bandwidth = .015;
+filter = oak;
+
+%%
+[score_field, x_grid, y_grid] = make_score_field(x, y, values, weights, grid_size, range, bandwidth, filter);
+
+%%
+figure
+hold on
+axis xy
+colorbar
+
+imagesc(x_grid, y_grid, score_field, [0,500])
+
+for i=1:length(x)
+    %color = [values(i)/600, 1-values(i)/600, 0];
+    if isnan(values(i))
+        continue;
+    end
+    plot(x(i), y(i), 'go')
+    %text(x(i), y(i), num2str(values(i)))
+end
+
+for i=1:length(oak)
+    plot(oak(i).Lon, oak(i).Lat, 'g')
+end
